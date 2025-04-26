@@ -1,6 +1,6 @@
 name: "Discord2MQTT"
 description: "Collects user data from Discord Servers and turns them into entities in Home Assistant via MQTT."
-version: "1.0.0"
+version: "1.0.1"
 slug: "discord2mqtt"
 init: false
 arch:
