@@ -15,4 +15,4 @@ if bashio::config.has_value 'mqtt_password'; then export MQTT_PASSWORD=$(bashio:
 
 bashio::log.info "Starting Discord2MQTT script..."
 
-exec python3 app.py
+python3 app.py
