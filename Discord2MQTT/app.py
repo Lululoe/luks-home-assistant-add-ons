@@ -1,11 +1,15 @@
 import os
 import discord
 import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion # Import the versioning enum
 import json
 
 # MQTT Configuration
-MQTT_HOST = os.getenv("MQTT_HOST")
-MQTT_PORT = int(os.getenv("MQTT_PORT"))
+MQTT_HOST = os.getenv("MQTT_HOST", "core-mosquitto")
+# Provide a default port and handle potential None values
+MQTT_PORT_STR = os.getenv("MQTT_PORT", "1883")
+MQTT_PORT = int(MQTT_PORT_STR) if MQTT_PORT_STR.isdigit() else 1883
+
 MQTT_USERNAME = os.getenv("MQTT_USER")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 MQTT_BASE_TOPIC = os.getenv("MQTT_BASE_TOPIC")
@@ -19,16 +23,21 @@ intents.voice_states = True
 intents.members = True
 
 client = discord.Client(intents=intents)
-mqtt_client = mqtt.Client()
+
+# FIX: Initialize with CallbackAPIVersion.VERSION2 to remove the warning
+mqtt_client = mqtt.Client(CallbackAPIVersion.VERSION2)
 
 # Cache current voice states
 voice_channel_states = {}
 
 def setup_mqtt():
-    if MQTT_PASSWORD == "":
-        mqtt_client.username_pw_set(MQTT_USERNAME)
-    else:
+    # Only set credentials if a username is actually present
+    if MQTT_USERNAME:
+        # Paho MQTT handles empty/None passwords gracefully if username is provided
         mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+        print(f"MQTT: Authenticating as user '{MQTT_USERNAME}'")
+    else:
+        print("MQTT: Connecting without authentication (ensure this is intended)")
 
     mqtt_client.connect(MQTT_HOST, MQTT_PORT, 60)
     mqtt_client.loop_start()
@@ -43,7 +52,7 @@ def publish_discovery(guild: discord.Guild):
             "value_template": "{{ value_json.users }}",
             "state_topic": topic,
             "json_attributes_topic": f"{MQTT_BASE_TOPIC}/{guild.id}/{channel.id}/attributes",
-            "json_attributes_template": "{\"users\": {{value_json.users}}}",
+            "json_attributes_template": "{\"users\": {{ value_json.users | tojson }}}",
             "unique_id": str(channel.id),
             "name": channel.name
         }
@@ -79,8 +88,16 @@ def publish_channel_update(guild_id, channel: discord.VoiceChannel):
 
 def publish_channel_attributes(guild_id, channel: discord.VoiceChannel):
     attr_topic = f"{MQTT_BASE_TOPIC}/{guild_id}/{channel.id}/attributes"
-    display_names = [member.display_name for member in channel.members]
-    payload = json.dumps({"users": display_names})
+    # display_names = [member.display_name for member in channel.members]
+    members = []
+    for member in channel.members:
+        members.append({
+            "id": str(member.id),
+            "name": member.name,
+            "display_name": member.display_name,
+            "avatar_url": str(member.avatar.url) if member.avatar else None
+        })
+    payload = json.dumps({"users": members})
     mqtt_client.publish(attr_topic, payload)
 
 def publish_channel_deletion(guild_id, channel_name):
@@ -124,4 +141,7 @@ async def on_guild_channel_delete(channel):
 
 if __name__ == '__main__':
     setup_mqtt()
-    client.run(DISCORD_BOT_TOKEN)
+    if DISCORD_BOT_TOKEN:
+        client.run(DISCORD_BOT_TOKEN)
+    else:
+        print("Error: DISCORD_BOT_TOKEN not found. Check your config or .env file.")
