@@ -11,19 +11,19 @@ arch:
   - i386
 startup: services
 
+services:
+  - mqtt:need
+
 options:
   discord_bot_token:
-  mqtt_host: "core-mosquitto"
-  mqtt_port: 1883
-  mqtt_user: addons
   mqtt_base_topic: "discord2mqtt"
   mqtt_discovery_prefix: "homeassistant/device"
 
 schema:
   discord_bot_token: password
-  mqtt_host: str
-  mqtt_port: port
-  mqtt_user: str
+  mqtt_host: str?
+  mqtt_port: port?
+  mqtt_user: str?
   mqtt_password: "password?"
   mqtt_base_topic: str
   mqtt_discovery_prefix: str
