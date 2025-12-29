@@ -5,9 +5,9 @@ from paho.mqtt.enums import CallbackAPIVersion # Import the versioning enum
 import json
 
 # MQTT Configuration
-MQTT_HOST = os.getenv("MQTT_HOST", "core-mosquitto")
+MQTT_HOST = os.getenv("MQTT_HOST")
 # Provide a default port and handle potential None values
-MQTT_PORT_STR = os.getenv("MQTT_PORT", "1883")
+MQTT_PORT_STR = os.getenv("MQTT_PORT")
 MQTT_PORT = int(MQTT_PORT_STR) if MQTT_PORT_STR.isdigit() else 1883
 
 MQTT_USERNAME = os.getenv("MQTT_USER")
